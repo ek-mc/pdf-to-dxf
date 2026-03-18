@@ -53,8 +53,13 @@ export default defineConfig(({ mode }) => {
     };
   }
 
-  // ── Dev / demo build ──────────────────────────────────────────────────────
+  // ── Demo / GitHub Pages build ─────────────────────────────────────────────
   return {
     plugins: [react()],
+    base: mode === 'ghpages' ? '/pdf-to-dxf/' : '/',
+    build: {
+      outDir: 'dist-demo',
+      emptyOutDir: true,
+    },
   };
 });
