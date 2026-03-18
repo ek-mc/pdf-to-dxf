@@ -1,5 +1,8 @@
 # pdf-to-dxf
 
+Live: [https://ek-mc.github.io/physics-game/](https://ek-mc.github.io/pdf-to-dxf/)
+
+
 A robust, fully local PDF to AutoCAD DXF converter. It extracts vector paths and text from PDF files and converts them into DXF format.
 
 This tool is part of the **ek-mc civil toolset**. It operates entirely on your local machine—no cloud uploads, ensuring your data remains private and secure.
@@ -120,6 +123,3 @@ console.log(result.dxf); // The resulting DXF string
 ## License
 
 MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-*Developed by ek-mc as part of the civil toolset.*
