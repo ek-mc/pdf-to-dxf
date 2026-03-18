@@ -1,6 +1,6 @@
 # pdf-to-dxf
 
-Live: [https://ek-mc.github.io/physics-game/](https://ek-mc.github.io/pdf-to-dxf/)
+Live: [[https://ek-mc.github.io/physics-game/](https://ek-mc.github.io/pdf-to-dxf/)](https://ek-mc.github.io/pdf-to-dxf/)
 
 
 A robust, fully local PDF to AutoCAD DXF converter. It extracts vector paths and text from PDF files and converts them into DXF format.
