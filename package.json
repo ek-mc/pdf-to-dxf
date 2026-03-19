@@ -21,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ek-mc/pdf-to-dxf.git"
+    "url": "git+https://github.com/ek-mc/pdf-to-dxf.git"
   },
   "homepage": "https://github.com/ek-mc/pdf-to-dxf#readme",
   "bugs": {
@@ -42,7 +42,7 @@
     }
   },
   "bin": {
-    "pdf-to-dxf": "./dist/cli.mjs"
+    "pdf-to-dxf": "dist/cli.mjs"
   },
   "files": [
     "dist",
