@@ -33,7 +33,7 @@ npm install @ek-mc/pdf-to-dxf
 If installed globally, you can run `pdf-to-dxf` directly from your terminal. Alternatively, use `npx` without installing:
 
 ```bash
-npx @ek-mc/pdf-to-dxf input.pdf [output.dxf] [options]
+npx pdf-to-dxf input.pdf [output.dxf] [options]
 ```
 
 ### Examples
