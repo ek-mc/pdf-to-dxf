@@ -1,6 +1,6 @@
 {
   "name": "pdf-to-dxf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Convert PDF files to AutoCAD DXF format — React component + CLI. Part of the ek-mc civil toolset.",
   "keywords": [
     "pdf",
