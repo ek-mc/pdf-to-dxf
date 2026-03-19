@@ -24,6 +24,7 @@
   "include": [
     "src/core",
     "src/react",
+    "src/types/**/*.d.ts",
     "src/index.ts"
   ]
 }

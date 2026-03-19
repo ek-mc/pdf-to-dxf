@@ -11,6 +11,7 @@ This tool is part of the **ek-mc civil toolset**. It operates entirely on your l
 
 - **Dual-mode**: Use it as a standalone CLI tool or embed it as a React component.
 - **Local processing**: Zero external API calls; your files never leave your machine.
+- **Local PDF.js worker**: Browser worker is bundled/served locally (no CDN dependency).
 - **Vector extraction**: Accurately extracts lines, curves (approximated as polylines), and rectangles.
 - **Text extraction**: Preserves text elements with their relative positioning.
 - **Customizable**: Supports page selection, coordinate scaling, and layer prefixing.

@@ -20,14 +20,13 @@
 import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { DxfWriter, Colors, point3d } from '@tarikjabiri/dxf';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Configure the pdfjs worker for browser environments.
-// Vite bundles the worker URL at build time via the ?url import.
+// The worker is bundled locally and served by the app (no CDN dependency).
 // In Node (CLI), the worker is set separately in src/cli/index.ts.
 if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  // Use the CDN-hosted worker that matches the installed pdfjs-dist version.
-  // This avoids bundling the large worker file into the main chunk.
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 }
 
 export interface ConvertOptions {
