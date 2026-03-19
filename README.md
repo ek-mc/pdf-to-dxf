@@ -2,6 +2,7 @@
 
 Live: https://ek-mc.github.io/pdf-to-dxf/
 
+npm: https://www.npmjs.com/package/pdf-to-dxf
 
 A robust, fully local PDF to AutoCAD DXF converter. It extracts vector paths and text from PDF files and converts them into DXF format.
 
