@@ -1,7 +1,7 @@
 # pdf-to-dxf
 
-[![npm version](https://img.shields.io/npm/v/@ek-mc/pdf-to-dxf.svg)](https://www.npmjs.com/package/@ek-mc/pdf-to-dxf)
-[![npm downloads](https://img.shields.io/npm/dm/@ek-mc/pdf-to-dxf.svg)](https://www.npmjs.com/package/@ek-mc/pdf-to-dxf)
+[![npm version](https://img.shields.io/npm/v/pdf-to-dxf.svg)](https://www.npmjs.com/package/pdf-to-dxf)
+[![npm downloads](https://img.shields.io/npm/dm/pdf-to-dxf.svg)](https://www.npmjs.com/package/pdf-to-dxf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ek-mc/pdf-to-dxf/blob/main/LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/ek-mc/pdf-to-dxf/ci.yml?branch=main&label=CI)](https://github.com/ek-mc/pdf-to-dxf/actions/workflows/ci.yml)
 
