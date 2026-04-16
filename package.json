@@ -90,7 +90,7 @@
     "globals": "^17.4.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.2",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0",
     "vite-plugin-dts": "^4.5.4"
