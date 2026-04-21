@@ -1,5 +1,12 @@
 # Changelog
 
+## Upgrade Notes convention
+
+For each release entry, include an **Upgrade Notes** line:
+- `Upgrade Notes: None` if no migration/breaking changes are required
+- otherwise include concrete migration/compatibility instructions
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
