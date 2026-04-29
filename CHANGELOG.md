@@ -21,3 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for selecting specific pages to convert.
 - Support for custom scaling and layer prefixing.
 - Demo application to preview the React component.
+
+## 2026-04-29
+
+- Added basic GitHub Actions CI workflow (`.github/workflows/basic-ci.yml`).
+- Maintenance: closed stale dependency PR queue for cleaner triage (where applicable).
