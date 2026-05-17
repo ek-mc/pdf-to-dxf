@@ -58,6 +58,7 @@
     "build:ghpages": "vite build --mode ghpages",
     "build": "pnpm run build:lib && pnpm run build:cli",
     "preview": "vite preview",
+    "test": "vitest run",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build"
   },
@@ -93,6 +94,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.6"
   }
 }
