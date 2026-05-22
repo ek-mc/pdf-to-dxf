@@ -68,18 +68,183 @@ const PATH_OPS = {
   rectangle: 19,
 } as const;
 
-// ─── Process a constructPath batch ──────────────────────────────────────────
+// ─── Adaptive Bézier Subdivision ─────────────────────────────────────────────
+//
+// Replaces the old fixed-step approximation with a recursive De Casteljau
+// subdivision approach. The curve is split until the maximum distance from
+// the chord (chordal deviation) is below `tolerance`. This produces smooth
+// output for large curves and minimal segments for near-straight ones.
+//
+// tolerance: maximum allowed deviation in DXF units (default: 0.5 pt ≈ 0.18mm)
+// maxDepth:  recursion guard to prevent stack overflow on degenerate curves
 
-function processConstructPath(
+const BEZIER_TOLERANCE = 0.5;
+const BEZIER_MAX_DEPTH = 12;
+
+function bezierPoint(
+  p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number
+): Vec3 {
+  const u = 1 - t;
+  return pt(
+    u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+    u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+  );
+}
+
+function chordalDeviation(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3): number {
+  // Maximum distance of the two inner control points from the chord p0→p3.
+  const dx = p3.x - p0.x;
+  const dy = p3.y - p0.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    // Degenerate chord: use distance from p0
+    const d1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    const d2 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+    return Math.max(d1, d2);
+  }
+  const cross1 = Math.abs(dx * (p0.y - p1.y) - dy * (p0.x - p1.x)) / Math.sqrt(lenSq);
+  const cross2 = Math.abs(dx * (p0.y - p2.y) - dy * (p0.x - p2.x)) / Math.sqrt(lenSq);
+  return Math.max(cross1, cross2);
+}
+
+/**
+ * Adaptively subdivide a cubic Bézier curve and emit LINE entities.
+ * Produces far fewer segments for straight/near-straight sections and
+ * more segments only where the curve actually bends.
+ */
+export function approximateBezierAdaptive(
+  p0: Vec3,
+  p1: Vec3,
+  p2: Vec3,
+  p3: Vec3,
+  writer: DxfWriter,
+  tolerance = BEZIER_TOLERANCE,
+  depth = 0,
+): void {
+  if (depth >= BEZIER_MAX_DEPTH || chordalDeviation(p0, p1, p2, p3) <= tolerance) {
+    // Flat enough — emit a single line segment
+    writer.addLine(p0, p3);
+    return;
+  }
+
+  // De Casteljau split at t=0.5
+  const m01 = pt((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+  const m12 = pt((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+  const m23 = pt((p2.x + p3.x) / 2, (p2.y + p3.y) / 2);
+  const m012 = pt((m01.x + m12.x) / 2, (m01.y + m12.y) / 2);
+  const m123 = pt((m12.x + m23.x) / 2, (m12.y + m23.y) / 2);
+  const mid = pt((m012.x + m123.x) / 2, (m012.y + m123.y) / 2);
+
+  approximateBezierAdaptive(p0, m01, m012, mid, writer, tolerance, depth + 1);
+  approximateBezierAdaptive(mid, m123, m23, p3, writer, tolerance, depth + 1);
+}
+
+// ─── Circle / Arc fitting ─────────────────────────────────────────────────────
+//
+// A PDF circle is encoded as 4 cubic Bézier curves (one per quadrant).
+// Each quadrant uses the standard kappa approximation factor ≈ 0.5523.
+// We detect this pattern in a closed sub-path and, when confirmed, emit a
+// true DXF CIRCLE entity instead of 32+ line segments.
+//
+// Detection strategy:
+//  1. Collect all Bézier control points for a closed sub-path.
+//  2. If there are exactly 4 curveTo ops, attempt a least-squares circle fit
+//     on the 4 anchor points (start of each curve).
+//  3. Accept the fit if the residual is below CIRCLE_FIT_TOLERANCE.
+
+const CIRCLE_FIT_TOLERANCE = 0.5; // max deviation of anchor points from fitted circle
+
+interface SubPath {
+  ops: Array<{ type: 'line'; to: Vec3 } | { type: 'curve'; p1: Vec3; p2: Vec3; p3: Vec3 }>;
+  start: Vec3;
+  closed: boolean;
+}
+
+/**
+ * Fit a circle through 3+ points using the algebraic least-squares method.
+ * Returns { cx, cy, r } or null if the points are collinear / too few.
+ */
+function fitCircle(points: Vec3[]): { cx: number; cy: number; r: number } | null {
+  if (points.length < 3) return null;
+
+  // Build the linear system: (x-cx)^2 + (y-cy)^2 = r^2
+  // Rearranged: 2*cx*x + 2*cy*y + (r^2 - cx^2 - cy^2) = x^2 + y^2
+  // Let c = r^2 - cx^2 - cy^2 → solve [2x, 2y, 1] * [cx, cy, c]^T = x^2+y^2
+  let sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0;
+  let sumXY = 0, sumX3 = 0, sumY3 = 0, sumXY2 = 0, sumX2Y = 0;
+  const n = points.length;
+
+  for (const p of points) {
+    const x = p.x, y = p.y;
+    sumX += x; sumY += y;
+    sumX2 += x * x; sumY2 += y * y;
+    sumXY += x * y;
+    sumX3 += x * x * x; sumY3 += y * y * y;
+    sumXY2 += x * y * y; sumX2Y += x * x * y;
+  }
+
+  const A = 2 * (sumX2 - sumX * sumX / n);
+  const B = 2 * (sumXY - sumX * sumY / n);
+  const C = 2 * (sumY2 - sumY * sumY / n);
+  const D = sumX3 + sumXY2 - (sumX2 + sumY2) * sumX / n;
+  const E = sumX2Y + sumY3 - (sumX2 + sumY2) * sumY / n;
+
+  const det = A * C - B * B;
+  if (Math.abs(det) < 1e-10) return null; // collinear
+
+  const cx = (D * C - B * E) / det;
+  const cy = (A * E - B * D) / det;
+  const r = Math.sqrt((sumX2 + sumY2 - 2 * cx * sumX - 2 * cy * sumY) / n + cx * cx + cy * cy);
+
+  if (!isFinite(r) || r <= 0) return null;
+  return { cx, cy, r };
+}
+
+/**
+ * Check if a closed sub-path with exactly 4 curveTo ops is a circle.
+ * Returns { cx, cy, r } if it is, or null otherwise.
+ */
+function tryFitCircleFromSubPath(
+  sub: SubPath,
+): { cx: number; cy: number; r: number } | null {
+  if (!sub.closed) return null;
+
+  const curves = sub.ops.filter((o) => o.type === 'curve');
+  if (curves.length !== 4) return null;
+
+  // Anchor points: start of sub-path + p3 of each curve
+  const anchors: Vec3[] = [sub.start];
+  for (const op of sub.ops) {
+    if (op.type === 'curve') anchors.push(op.p3);
+  }
+  // anchors[4] === anchors[0] (closed), so use first 4
+  const pts = anchors.slice(0, 4);
+
+  const fit = fitCircle(pts);
+  if (!fit) return null;
+
+  // Validate: all anchor points must be within tolerance of the fitted circle
+  for (const p of pts) {
+    const dist = Math.abs(Math.hypot(p.x - fit.cx, p.y - fit.cy) - fit.r);
+    if (dist > CIRCLE_FIT_TOLERANCE) return null;
+  }
+
+  return fit;
+}
+
+// ─── Sub-path collector ───────────────────────────────────────────────────────
+//
+// We first collect sub-paths from the constructPath batch, then decide per
+// sub-path whether to emit a CIRCLE entity or fall back to line/curve output.
+
+function collectSubPaths(
   subOps: number[],
   coords: number[],
-  writer: DxfWriter,
-  scale: number
-): void {
-  let ci = 0; // coordinate index
-  let pathStart: Vec3 | null = null;
-  let currentPos: Vec3 | null = null;
-
+  scale: number,
+): SubPath[] {
+  const paths: SubPath[] = [];
+  let current: SubPath | null = null;
+  let ci = 0;
   const s = (v: number) => v * scale;
 
   for (const op of subOps) {
@@ -87,70 +252,54 @@ function processConstructPath(
       case PATH_OPS.moveTo: {
         const p = pt(s(coords[ci]), s(coords[ci + 1]));
         ci += 2;
-        pathStart = p;
-        currentPos = p;
+        current = { ops: [], start: p, closed: false };
+        paths.push(current);
         break;
       }
 
       case PATH_OPS.lineTo: {
-        if (currentPos) {
-          const to = pt(s(coords[ci]), s(coords[ci + 1]));
-          ci += 2;
-          writer.addLine(currentPos, to);
-          currentPos = to;
-        } else {
-          ci += 2;
-        }
+        const to = pt(s(coords[ci]), s(coords[ci + 1]));
+        ci += 2;
+        if (current) current.ops.push({ type: 'line', to });
         break;
       }
 
       case PATH_OPS.curveTo: {
-        // 6 coords: p1x p1y p2x p2y p3x p3y
-        if (!currentPos) { ci += 6; break; }
         const p1 = pt(s(coords[ci]), s(coords[ci + 1]));
         const p2 = pt(s(coords[ci + 2]), s(coords[ci + 3]));
         const p3 = pt(s(coords[ci + 4]), s(coords[ci + 5]));
         ci += 6;
-        approximateBezier(currentPos, p1, p2, p3, writer);
-        currentPos = p3;
+        if (current) current.ops.push({ type: 'curve', p1, p2, p3 });
         break;
       }
 
       case PATH_OPS.curveTo2: {
-        // 4 coords: p2x p2y p3x p3y (current replaces p1)
-        if (!currentPos) { ci += 4; break; }
-        const p1 = currentPos;
+        // p1 = current position (handled at emit time — store as curveTo with p1=p3 sentinel)
         const p2 = pt(s(coords[ci]), s(coords[ci + 1]));
         const p3 = pt(s(coords[ci + 2]), s(coords[ci + 3]));
         ci += 4;
-        approximateBezier(currentPos, p1, p2, p3, writer);
-        currentPos = p3;
+        if (current) {
+          // We store a sentinel: p1 will be resolved to the previous position at emit time.
+          // For circle detection we only need p3, so this is fine.
+          current.ops.push({ type: 'curve', p1: p3, p2, p3 }); // p1 sentinel = p3 (resolved at emit)
+        }
         break;
       }
 
       case PATH_OPS.curveTo3: {
-        // 4 coords: p1x p1y p3x p3y (p3 replaces p2)
-        if (!currentPos) { ci += 4; break; }
         const p1 = pt(s(coords[ci]), s(coords[ci + 1]));
         const p3 = pt(s(coords[ci + 2]), s(coords[ci + 3]));
         ci += 4;
-        approximateBezier(currentPos, p1, p3, p3, writer);
-        currentPos = p3;
+        if (current) current.ops.push({ type: 'curve', p1, p2: p3, p3 });
         break;
       }
 
       case PATH_OPS.closePath: {
-        if (currentPos && pathStart) {
-          if (currentPos.x !== pathStart.x || currentPos.y !== pathStart.y) {
-            writer.addLine(currentPos, pathStart);
-          }
-        }
-        currentPos = pathStart;
+        if (current) current.closed = true;
         break;
       }
 
       case PATH_OPS.rectangle: {
-        // 4 coords: x y w h
         const rx = s(coords[ci]);
         const ry = s(coords[ci + 1]);
         const rw = s(coords[ci + 2]);
@@ -160,13 +309,18 @@ function processConstructPath(
         const br = pt(rx + rw, ry);
         const tr = pt(rx + rw, ry + rh);
         const tl = pt(rx, ry + rh);
-        writer.addLine(bl, br);
-        writer.addLine(br, tr);
-        writer.addLine(tr, tl);
-        writer.addLine(tl, bl);
-        // rectangle also sets the current path
-        pathStart = bl;
-        currentPos = bl;
+        const rectPath: SubPath = {
+          start: bl,
+          ops: [
+            { type: 'line', to: br },
+            { type: 'line', to: tr },
+            { type: 'line', to: tl },
+            { type: 'line', to: bl },
+          ],
+          closed: true,
+        };
+        paths.push(rectPath);
+        current = rectPath;
         break;
       }
 
@@ -174,33 +328,51 @@ function processConstructPath(
         break;
     }
   }
+
+  return paths;
 }
 
-function approximateBezier(
-  p0: Vec3,
-  p1: Vec3,
-  p2: Vec3,
-  p3: Vec3,
+// ─── Sub-path emitter ─────────────────────────────────────────────────────────
+
+function emitSubPath(sub: SubPath, writer: DxfWriter): void {
+  // Attempt circle detection first
+  const circle = tryFitCircleFromSubPath(sub);
+  if (circle) {
+    writer.addCircle(pt(circle.cx, circle.cy), circle.r);
+    return;
+  }
+
+  // Fall back to adaptive line/curve emission
+  let pos = sub.start;
+
+  for (const op of sub.ops) {
+    if (op.type === 'line') {
+      writer.addLine(pos, op.to);
+      pos = op.to;
+    } else {
+      // curveTo2 sentinel: p1 was stored as p3, resolve to actual current pos
+      const p1 = op.p1 === op.p3 ? pos : op.p1;
+      approximateBezierAdaptive(pos, p1, op.p2, op.p3, writer);
+      pos = op.p3;
+    }
+  }
+
+  if (sub.closed && (pos.x !== sub.start.x || pos.y !== sub.start.y)) {
+    writer.addLine(pos, sub.start);
+  }
+}
+
+// ─── Process a constructPath batch ──────────────────────────────────────────
+
+export function processConstructPath(
+  subOps: number[],
+  coords: number[],
   writer: DxfWriter,
-  steps = 8
+  scale: number
 ): void {
-  let prev = p0;
-  for (let t = 1; t <= steps; t++) {
-    const u = t / steps;
-    const v = 1 - u;
-    const bx =
-      v * v * v * p0.x +
-      3 * v * v * u * p1.x +
-      3 * v * u * u * p2.x +
-      u * u * u * p3.x;
-    const by =
-      v * v * v * p0.y +
-      3 * v * v * u * p1.y +
-      3 * v * u * u * p2.y +
-      u * u * u * p3.y;
-    const next = pt(bx, by);
-    writer.addLine(prev, next);
-    prev = next;
+  const paths = collectSubPaths(subOps, coords, scale);
+  for (const sub of paths) {
+    emitSubPath(sub, writer);
   }
 }
 
