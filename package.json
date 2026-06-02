@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "@tarikjabiri/dxf": "^2.8.9",
-    "pdfjs-dist": "^5.5.207"
+    "pdfjs-dist": "^6.0.227"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
