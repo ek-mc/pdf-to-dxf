@@ -1,5 +1,18 @@
 # Changelog
 
+
+## [1.3.0] - 2026-11-01
+
+### Fixed
+- Refresh compatible dependencies and the committed pnpm lockfile.
+- Run reproducible pnpm installs and project checks in CI on Node.js 24.
+- Upgrade PDF.js to the patched 6.x engine and decode its packed vector-path operators.
+- Correct CLI version lookup in the built package.
+- Remove an unused curve helper that blocked lint.
+
+### Upgrade Notes
+PDF.js now uses its supported 6.x line. Node.js 22.13+ is required for CLI/library use; package API and CLI options are unchanged. Rebuild browser bundles and the local worker together.
+
 ## Upgrade Notes convention
 
 For each release entry, include an **Upgrade Notes** line:

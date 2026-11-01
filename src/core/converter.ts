@@ -18,6 +18,7 @@
  */
 
 import * as pdfjs from 'pdfjs-dist';
+import { unpackPath } from './packed-path';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { DxfWriter, Colors, point3d } from '@tarikjabiri/dxf';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -80,16 +81,6 @@ const PATH_OPS = {
 
 const BEZIER_TOLERANCE = 0.5;
 const BEZIER_MAX_DEPTH = 12;
-
-function bezierPoint(
-  p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number
-): Vec3 {
-  const u = 1 - t;
-  return pt(
-    u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
-    u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
-  );
-}
 
 function chordalDeviation(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3): number {
   // Maximum distance of the two inner control points from the chord p0→p3.
@@ -401,8 +392,18 @@ async function processPage(
 
         // pdfjs v4: all path sub-ops are batched into constructPath
         if (fn === pdfjs.OPS.constructPath) {
-          const [subOps, coords] = argsArray[i] as [number[], number[]];
-          processConstructPath(subOps, coords, writer, opts.scale);
+          const args = argsArray[i];
+          if (typeof args[0] === 'number') {
+            // PDF.js 6: paint operator, packed DrawOPS data, bounding box.
+            const packed = args[1]?.[0] as ArrayLike<number> | undefined;
+            if (packed) {
+              const { ops, coords } = unpackPath(packed);
+              processConstructPath(ops, coords, writer, opts.scale);
+            }
+          } else {
+            const [subOps, coords] = args as [number[], number[]];
+            processConstructPath(subOps, coords, writer, opts.scale);
+          }
         }
       }
     } catch (err) {

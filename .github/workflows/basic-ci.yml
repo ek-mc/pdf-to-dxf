@@ -10,39 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  basic-ci:
+  checks:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
       - name: Setup Node.js
-        if: ${{ hashFiles('package.json') != '' }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            npm-shrinkwrap.json
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
 
-      - name: Install deps (Node)
-        if: ${{ hashFiles('package.json') != '' }}
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Test (Node)
-        if: ${{ hashFiles('package.json') != '' }}
-        run: npm test --if-present
-
-      - name: Build (Node)
-        if: ${{ hashFiles('package.json') != '' }}
-        run: npm run build --if-present
-
-      - name: No-op for non-Node repos
-        if: ${{ hashFiles('package.json') == '' }}
-        run: echo "No package.json detected; skipping Node checks."
+      - name: Real PDF conversion smoke test
+        run: pnpm test:cli

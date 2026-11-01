@@ -57,7 +57,7 @@ Examples:
 
 function printVersion() {
   try {
-    const pkgPath = new URL('../../package.json', import.meta.url);
+    const pkgPath = new URL('../package.json', import.meta.url);
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     console.log(pkg.version);
   } catch {

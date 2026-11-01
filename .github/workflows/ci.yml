@@ -35,3 +35,6 @@ jobs:
 
       - name: Pack dry-run
         run: npm pack --dry-run
+
+      - name: Real PDF conversion smoke test
+        run: pnpm test:cli

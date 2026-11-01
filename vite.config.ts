@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
         },
         outDir: 'dist',
         emptyOutDir: false,
-        target: 'node18',
+        target: 'node22',
       },
     };
   }
