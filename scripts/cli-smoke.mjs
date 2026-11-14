@@ -33,6 +33,17 @@ try {
   assert.match(dxf, /\nLINE\n/);
   assert.match(dxf, /\n10\n10\n20\n20\n/);
   assert.match(dxf, /\n11\n100\n21\n20\n/);
+  // Exercise the real PDF.js -> converter -> DXF path, not copied geometry helpers.
+  const scaled = join(dir, 'scaled.dxf');
+  execFileSync(process.execPath, [cli.pathname, input, scaled, '--no-text', '--scale', '2', '--layer-prefix', 'SURVEY'], { encoding: 'utf8' });
+  const scaledDxf = readFileSync(scaled, 'utf8').replaceAll('\r\n', '\n');
+  assert.match(scaledDxf, /\n10\n20\n20\n40\n/);
+  assert.match(scaledDxf, /\n11\n200\n21\n40\n/);
+  assert.match(scaledDxf, /\n8\nSURVEY_1\n/);
+  assert.equal((scaledDxf.match(/\nLINE\n/g) ?? []).length, 1);
+  const empty = join(dir, 'no-paths.dxf');
+  execFileSync(process.execPath, [cli.pathname, input, empty, '--no-text', '--no-paths'], { encoding: 'utf8' });
+  assert.doesNotMatch(readFileSync(empty, 'utf8').replaceAll('\r\n', '\n'), /\nLINE\n/);
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const version = execFileSync(process.execPath, [cli.pathname, '--version'], { encoding: 'utf8' });
   assert.equal(version.trim().split('\n').at(-1), pkg.version);
