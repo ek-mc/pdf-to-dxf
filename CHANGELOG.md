@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.1] - 2026-11-14
+
+### Added
+- Real PDF-to-DXF CLI regression checks for coordinate scaling, layer prefixes and disabled path output.
+- Run the existing unit tests in the packaging CI workflow as well as Basic CI.
+
+### Fixed
+- Typecheck CLI source with Node types in the Node project, keeping browser source in the app project; enforce full typecheck in both CI workflows.
+
+### Upgrade Notes
+None. No dependency, runtime or public API changes.
+
 
 ## [1.3.0] - 2026-11-01
 
