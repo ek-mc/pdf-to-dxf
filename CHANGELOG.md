@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.2] - 2026-11-23
+
+### Fixed
+- Pin API Extractor’s development-only lodash dependency to compatible 4.18.1, addressing GHSA-r5fr-rjxr-66jc. No PDF engine or runtime dependency changes.
+
+### Upgrade Notes
+None.
+
 ## [1.3.1] - 2026-11-14
 
 ### Added
