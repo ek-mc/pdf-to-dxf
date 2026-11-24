@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.3] - 2026-11-24
+
+### Changed
+- Pin affected development-tool minimatch edges to 11.0.9 to resolve GHSA-g3hv-75wg-m249. This targeted transitive major migration is explicitly authorized by the owner; requires Node 20 or >=22, within the Node 24 toolchain. No application runtime dependencies are migrated.
+
 ## [1.3.2] - 2026-11-23
 
 ### Fixed
