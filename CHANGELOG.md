@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.4] - 2026-11-26
+
+### Changed
+- Owner-approved tooling majors: @types/node 26.4.0 and checkout/setup-node 7.0.0 across workflows.
+
+### Upgrade Notes
+- Development tooling only; no intentional application API, data or runtime deployment changes.
+- Actions v7 uses Node 24 on GitHub-hosted runners; application Node matrix unchanged.
+
 ## [1.3.3] - 2026-11-24
 
 ### Changed
